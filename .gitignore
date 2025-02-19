@@ -36,3 +36,10 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+.env
+
+firebase.json
+google-services.json
+android/app/google-services.json
+ios/GoogleService-Info.plist
+credentials.json
