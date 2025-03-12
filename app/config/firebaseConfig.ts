@@ -5,6 +5,7 @@
 
 import { initializeApp } from "firebase/app";
 import { getStorage } from "firebase/storage";
+
 import { getFirestore } from "firebase/firestore";
 
 import {
@@ -14,6 +15,7 @@ import {
   FIREBASE_STORAGE_BUCKET,
   FIREBASE_MESSAGING_SENDER_ID,
   FIREBASE_APP_ID,
+  FIREBASE_MEASUREMENT_ID,
 } from "@env"; // ✅ Import env variables from react-native-dotenv
 
 const firebaseConfig = {
@@ -23,6 +25,7 @@ const firebaseConfig = {
   storageBucket: FIREBASE_STORAGE_BUCKET,
   messagingSenderId: FIREBASE_MESSAGING_SENDER_ID,
   appId: FIREBASE_APP_ID,
+  measurementId: FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase only once

@@ -25,21 +25,58 @@ export default function ResultsScreen({ route }: Props): JSX.Element {
 
       {/* Show recommendations */}
       <Text style={styles.recommendationTitle}>Recommended Treatments:</Text>
-      {recommendations.map((rec, index) => (
-        <Text key={index} style={styles.recommendationText}>
-          • {rec}
-        </Text>
-      ))}
+      <View style={styles.recommendationContainer}>
+        {recommendations.map((rec, index) => (
+          <Text key={index} style={styles.recommendationText}>
+            {rec}
+          </Text>
+        ))}
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, alignItems: "center" },
-  title: { fontSize: 24, fontWeight: "600", marginBottom: 16 },
-  fullImage: { width: 220, height: 220, borderRadius: 10, marginBottom: 16 },
-  resultText: { fontSize: 18, marginBottom: 10 },
-  confidenceText: { fontSize: 14, color: "#666", marginBottom: 8 },
-  recommendationTitle: { fontSize: 20, fontWeight: "600", marginTop: 20 },
-  recommendationText: { fontSize: 16, marginBottom: 5 },
+  container: {
+    padding: 20,
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "600",
+    marginBottom: 16,
+  },
+  fullImage: {
+    width: 220,
+    height: 220,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  resultText: {
+    fontSize: 18,
+    marginBottom: 10,
+  },
+  confidenceText: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 8,
+  },
+  recommendationTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginTop: 20,
+    marginBottom: 8,
+    alignSelf: "flex-start", // Left-align title
+  },
+  recommendationContainer: {
+    paddingHorizontal: 10, // Indentation for recommendations
+    alignItems: "flex-start", // Align recommendations to the left
+    marginBottom: 10,
+  },
+  recommendationText: {
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 6,
+    lineHeight: 22, // Improved line height for better readability
+  },
 });

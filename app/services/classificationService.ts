@@ -33,7 +33,7 @@ export async function classifyAcne(
   photoUri: string
 ): Promise<{ classification: AcneType; confidence: number }> {
   try {
-    console.log("📸 Starting classification for:", photoUri); // ✅ Log image URI
+    console.log("Starting classification for:", photoUri); // ✅ Log image URI
 
     // Convert URI to blob
     const response = await fetch(photoUri);

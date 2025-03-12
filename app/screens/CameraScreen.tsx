@@ -7,6 +7,7 @@ import {
   Button,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
@@ -22,6 +23,7 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(true);
 
   if (!permission) return <View />;
   if (!permission.granted) {
@@ -35,6 +37,7 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
 
   const sendToAPI = async (imageUri: string) => {
     setIsAnalyzing(true);
+    setIsCameraActive(false);
 
     try {
       console.log("🚀 Uploading to Firebase...");
@@ -72,7 +75,17 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
       const result = await apiResponse.json();
       console.log("✅ API Classification Result:", result);
 
-      // Navigate to results screen with classification
+      // 🔥 NEW: Check for confidence threshold
+      if (result?.confidence < 0.7) {
+        Alert.alert(
+          "Low Confidence",
+          "The image could not be classified confidently. Please retake the picture with better lighting or a clearer angle."
+        );
+        setIsCameraActive(true);
+        return;
+      }
+
+      // Navigate to results screen with classification if confidence is high enough
       navigation.navigate("Results", {
         imageUri: downloadURL,
         classification: result,
@@ -80,6 +93,7 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
     } catch (error) {
       console.error("❌ Error in sendToAPI:", error);
       Alert.alert("Error", "Failed to classify the image.");
+      setIsCameraActive(true);
     } finally {
       setIsAnalyzing(false);
     }
@@ -106,29 +120,59 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
     }
   }
 
+  const handleResumeCamera = () => {
+    setIsCameraActive(true);
+  };
+
   return (
     <View style={styles.container}>
+      {/* Classification Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isAnalyzing}
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <ActivityIndicator size="large" color="#000" />
+            <Text style={styles.modalText}>Classifying... Please wait</Text>
+          </View>
+        </View>
+      </Modal>
+
       <CameraView
         style={styles.camera}
         facing={facing}
         ref={(ref) => (cameraRef.current = ref)}
+        active={isCameraActive}
       >
         <View style={styles.captureContainer}>
-          {isAnalyzing ? (
-            <ActivityIndicator size="large" color="#fff" />
+          {!isCameraActive ? (
+            <TouchableOpacity
+              onPress={handleResumeCamera}
+              style={styles.resumeButton}
+            >
+              <Text style={styles.captureText}>Resume Camera</Text>
+            </TouchableOpacity>
           ) : (
             <>
+              {/* Circular Capture Button */}
               <TouchableOpacity
                 onPress={handleTakePicture}
-                style={styles.captureButton}
+                style={styles.captureButtonContainer}
               >
-                <Text style={styles.captureText}>Take Picture</Text>
+                <View style={styles.outerCircle}>
+                  <View style={styles.innerCircle} />
+                </View>
               </TouchableOpacity>
+
+              {/* Improved Gallery Button */}
               <TouchableOpacity
                 onPress={handlePickImage}
                 style={styles.galleryButton}
               >
-                <Text style={styles.captureText}>Choose from photos</Text>
+                <Text style={styles.captureText}>Choose from Photos</Text>
               </TouchableOpacity>
             </>
           )}
@@ -139,34 +183,85 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
+  camera: {
+    flex: 1,
+  },
+  captureContainer: {
+    flex: 1,
+    backgroundColor: "transparent",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingBottom: 30,
+  },
+  captureButtonContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  outerCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "transparent",
+    borderColor: "#fff",
+    borderWidth: 3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  innerCircle: {
+    width: 55,
+    height: 55,
+    borderRadius: 27.5,
+    backgroundColor: "#fff",
+  },
+  galleryButton: {
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    borderRadius: 20,
+    marginBottom: 20,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    width: 250,
+  },
   permissionContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  permissionText: { fontSize: 18, marginBottom: 20 },
-  camera: { flex: 1 },
-  captureContainer: {
-    flex: 1,
-    backgroundColor: "transparent",
-    justifyContent: "flex-end",
+  permissionText: {
+    fontSize: 18,
+    marginBottom: 20,
   },
-  captureButton: {
+
+  modalText: {
+    fontSize: 16,
+    marginTop: 10,
+  },
+  captureText: {
+    fontSize: 16,
+    color: "#000",
+  },
+  resumeButton: {
     alignSelf: "center",
-    marginBottom: 30,
     paddingHorizontal: 20,
     paddingVertical: 10,
     backgroundColor: "rgba(255, 255, 255, 0.5)",
-    borderRadius: 10,
-  },
-  captureText: { fontSize: 18, color: "#000000" },
-  galleryButton: {
-    alignSelf: "center",
-    marginBottom: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
-    borderRadius: 10,
+    borderRadius: 20,
+    marginBottom: 20,
   },
 });
