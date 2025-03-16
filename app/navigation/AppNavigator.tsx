@@ -19,6 +19,7 @@ export type RootStackParamList = {
   Results: {
     imageUri: string;
     classification: any;
+    confidence?: number;
     croppedRegions?: { [key: string]: string }; // Make optional
   };
 };

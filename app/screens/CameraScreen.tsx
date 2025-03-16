@@ -13,8 +13,6 @@ import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/AppNavigator";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../config/firebaseConfig";
 
 type CameraScreenProps = NativeStackScreenProps<RootStackParamList, "Camera">;
 
@@ -40,33 +38,31 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
     setIsCameraActive(false);
 
     try {
-      console.log("🚀 Uploading to Firebase...");
+      console.log("🚀 Preparing image for classification...");
 
-      // Convert image URI to blob
+      // ✅ Convert URI to blob
       const response = await fetch(imageUri);
       const blob = await response.blob();
 
-      // Create a unique filename
-      const filename = `acne_${Date.now()}.jpg`;
-      const storageRef = ref(storage, `images/${filename}`);
+      // ✅ Create FormData directly (skip Firebase)
+      const formData = new FormData();
+      formData.append("file", {
+        uri: imageUri,
+        name: `acne_${Date.now()}.jpg`,
+        type: "image/jpeg",
+      } as any);
 
-      // Upload to Firebase Storage
-      await uploadBytes(storageRef, blob);
+      const API_URL = "http://192.168.86.28:8000/classify/"; // Replace with your computer's IP
+      console.log("🚀 Sending request to FastAPI...", API_URL);
 
-      // Get public URL from Firebase
-      const downloadURL = await getDownloadURL(storageRef);
-      console.log("✅ Firebase Upload Success! URL:", downloadURL);
-
-      // Send the Firebase URL to Cloud Run for classification
-      console.log("🚀 Sending Image URL to Cloud Run API...");
-      const apiResponse = await fetch(
-        "https://acne-api-983645359628.us-central1.run.app/classify",
-        {
-          method: "POST",
-          body: JSON.stringify({ image_url: downloadURL }),
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      // ✅ Send FormData to GPT-4 backend
+      const apiResponse = await fetch(API_URL, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (!apiResponse.ok) {
         throw new Error(`API Error: ${apiResponse.status}`);
@@ -75,8 +71,8 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
       const result = await apiResponse.json();
       console.log("✅ API Classification Result:", result);
 
-      // 🔥 NEW: Check for confidence threshold
-      if (result?.confidence < 0.7) {
+      // ✅ Handle low confidence cases (threshold at 0.6)
+      if (result?.confidence < 0.6) {
         Alert.alert(
           "Low Confidence",
           "The image could not be classified confidently. Please retake the picture with better lighting or a clearer angle."
@@ -85,10 +81,11 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
         return;
       }
 
-      // Navigate to results screen with classification if confidence is high enough
+      // ✅ Navigate to results screen if confidence is high enough
       navigation.navigate("Results", {
-        imageUri: downloadURL,
-        classification: result,
+        imageUri: imageUri, // Use original URI since you aren’t using Firebase anymore
+        classification: result.classification,
+        
       });
     } catch (error) {
       console.error("❌ Error in sendToAPI:", error);
@@ -102,7 +99,7 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
   const handlePickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false, // Removed cropping
+      allowsEditing: false,
       quality: 1,
     });
 
@@ -183,12 +180,8 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  camera: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  camera: { flex: 1 },
   captureContainer: {
     flex: 1,
     backgroundColor: "transparent",
@@ -238,24 +231,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: 250,
   },
-  permissionContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  permissionText: {
-    fontSize: 18,
-    marginBottom: 20,
-  },
-
-  modalText: {
-    fontSize: 16,
-    marginTop: 10,
-  },
-  captureText: {
-    fontSize: 16,
-    color: "#000",
-  },
+  modalText: { fontSize: 16, marginTop: 10 },
+  captureText: { fontSize: 16, color: "#000" },
   resumeButton: {
     alignSelf: "center",
     paddingHorizontal: 20,
@@ -264,4 +241,17 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 20,
   },
+
+  // ✅ FIXED: Added missing permissionContainer style
+  permissionContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  permissionText: {
+    fontSize: 18,
+    marginBottom: 20,
+  },
 });
+

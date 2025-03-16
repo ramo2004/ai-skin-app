@@ -1,28 +1,14 @@
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../config/firebaseConfig";
-
-/**
- * Possible acne types, updated to match backend labels.
- */
-/**
- * Possible acne types, exactly matching backend labels.
- */
-import { LogBox } from "react-native";
-
-LogBox.ignoreAllLogs(false); // ✅ Forces all logs to show
-
-console.log("🚀🚀🚀 This is a test log! If you see this, logging is working.");
-console.warn("⚠️ Warning log test!");
-console.error("❌ Error log test!");
-
 export type AcneType =
-  | "cyst" // ✅ Matches backend
-  | "blackhead" // ✅ Matches backend
-  | "whitehead" // ✅ Matches backend
-  | "papule" // ✅ Matches backend
-  | "pustule" // ✅ Matches backend
-  | "nodule" // ✅ Matches backend
-  | "no_acne_detected"; // ✅ No change needed
+  | "cyst"
+  | "blackhead"
+  | "whitehead"
+  | "papule"
+  | "pustule"
+  | "nodule"
+  | "fungal_acne"
+  | "acne_scars"
+  | "no_acne_detected"
+  | "uncertain"; // ✅ Added "uncertain" and "no_acne_detected" for fallback cases
 
 /**
  * Classifies acne from a photo URI using the API.
@@ -33,42 +19,30 @@ export async function classifyAcne(
   photoUri: string
 ): Promise<{ classification: AcneType; confidence: number }> {
   try {
-    console.log("Starting classification for:", photoUri); // ✅ Log image URI
+    console.log("Starting classification for:", photoUri);
 
-    // Convert URI to blob
+    // ✅ Convert URI to blob
     const response = await fetch(photoUri);
     const blob = await response.blob();
 
-    // Create a unique filename
-    const filename = `${Date.now()}.jpg`;
-    const storageRef = ref(storage, `images/${filename}`);
+    // ✅ Create FormData for sending to backend
+    const formData = new FormData();
+    formData.append("file", {
+      uri: photoUri,
+      name: "acne.jpg",
+      type: "image/jpeg",
+    } as any);
 
-    console.log("📤 Uploading to Firebase...");
-    await uploadBytes(storageRef, blob);
-    console.log("✅ Image uploaded, fetching Firebase URL...");
+    console.log("🚀 Sending request to FastAPI backend...");
 
-    // Get download URL
-    const downloadURL = await getDownloadURL(storageRef);
-    console.log("🔥 Firebase URL:", downloadURL); // ✅ Log Firebase URL
-
-    // If Firebase URL is undefined, it means Firebase isn't being used.
-    if (!downloadURL) {
-      console.warn("⚠️ Firebase upload failed, image URL is missing.");
-    }
-
-    console.log("🚀 Sending request to Cloud Run with image URL:", downloadURL);
-
-    // Send the image URL to your API for classification
-    const apiResponse = await fetch(
-      "https://acne-api-983645359628.us-central1.run.app/classify",
-      {
-        method: "POST",
-        body: JSON.stringify({ image_url: downloadURL }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    // ✅ Send the image to the FastAPI backend
+    const apiResponse = await fetch("http://127.0.0.1:8000/classify/", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
     if (!apiResponse.ok) {
       throw new Error(`API Error: ${apiResponse.status}`);
@@ -77,14 +51,45 @@ export async function classifyAcne(
     const result = await apiResponse.json();
     console.log("✅ API Classification Result:", result);
 
-    // Normalize API response to match frontend expectations
-    const normalizedClassification = result.classification
-      .toLowerCase()
-      .replace(/s$/, "") as AcneType;
+    // ✅ Normalize the response to match frontend expected format
+    let normalizedClassification: AcneType;
+
+    switch (result.classification.toLowerCase()) {
+      case "whiteheads":
+        normalizedClassification = "whitehead";
+        break;
+      case "blackheads":
+        normalizedClassification = "blackhead";
+        break;
+      case "papules":
+        normalizedClassification = "papule";
+        break;
+      case "pustules":
+        normalizedClassification = "pustule";
+        break;
+      case "nodules":
+        normalizedClassification = "nodule";
+        break;
+      case "cystic acne":
+        normalizedClassification = "cyst";
+        break;
+      case "fungal acne":
+        normalizedClassification = "fungal_acne";
+        break;
+      case "acne scars":
+        normalizedClassification = "acne_scars";
+        break;
+      case "clear skin":
+        normalizedClassification = "no_acne_detected";
+        break;
+      default:
+        normalizedClassification = "uncertain";
+        break;
+    }
 
     return {
       classification: normalizedClassification,
-      confidence: result.confidence,
+      confidence: result.confidence || 0.0, // ✅ Ensure confidence fallback
     };
   } catch (error: unknown) {
     console.error("❌ Error in classifyAcne:", error);
