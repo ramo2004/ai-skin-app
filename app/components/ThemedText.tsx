@@ -14,7 +14,7 @@ export function ThemedText({
   style,
   type = "default",
   ...props
-}: ThemedTextProps): JSX.Element {
+}: ThemedTextProps): React.JSX.Element {
   const baseStyle = {
     title: { fontSize: 24, fontWeight: "600" as const },
     subtitle: { fontSize: 20, fontWeight: "500" as const },

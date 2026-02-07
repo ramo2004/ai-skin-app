@@ -6,6 +6,6 @@
 import React from "react";
 import { View, type ViewProps } from "react-native";
 
-export function ThemedView(props: ViewProps): JSX.Element {
+export function ThemedView(props: ViewProps): React.JSX.Element {
   return <View {...props} />;
 }

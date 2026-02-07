@@ -10,7 +10,7 @@ import AppNavigator from "./navigation/AppNavigator";
 /**
  * Renders the entire application, wrapping navigation in a SafeAreaProvider.
  */
-export default function App(): JSX.Element {
+export default function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
       <AppNavigator />

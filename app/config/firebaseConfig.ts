@@ -5,8 +5,8 @@
 
 import { initializeApp } from "firebase/app";
 import { getStorage } from "firebase/storage";
-
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 import {
   FIREBASE_API_KEY,
@@ -16,7 +16,7 @@ import {
   FIREBASE_MESSAGING_SENDER_ID,
   FIREBASE_APP_ID,
   FIREBASE_MEASUREMENT_ID,
-} from "@env"; // ✅ Import env variables from react-native-dotenv
+} from "@env"; // eslint-disable-line import/no-unresolved
 
 const firebaseConfig = {
   apiKey: FIREBASE_API_KEY,
@@ -34,3 +34,6 @@ const app = initializeApp(firebaseConfig);
 // Export services
 export const storage = getStorage(app);
 export const db = getFirestore(app);
+
+// Use default Firebase Auth initialization for current SDK compatibility.
+export const auth = getAuth(app);

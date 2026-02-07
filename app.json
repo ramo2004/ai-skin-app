@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ai-skin-app",
-    "slug": "ai-skin-app",
+    "name": "AcneScan",
+    "slug": "acnescan",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -10,6 +10,9 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
+        "NSCameraUsageDescription": "AcneScan needs camera access to analyze your skin conditions.",
+        "NSPhotoLibraryUsageDescription": "AcneScan needs photos access to upload images for analysis.",
+        "NSMicrophoneUsageDescription": "AcneScan needs microphone access for video features.",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         }

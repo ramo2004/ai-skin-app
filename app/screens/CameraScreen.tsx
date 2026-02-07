@@ -1,222 +1,259 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Button,
   ActivityIndicator,
   Alert,
   Modal,
+  TouchableOpacity,
 } from "react-native";
-import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
+import * as Haptics from "expo-haptics";
+import { classifyAcne, analyzeProduct, IngredientResult } from "../services/classificationService";
+import { uploadImageForAnalysis } from "../services/firebaseService";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 
 type CameraScreenProps = NativeStackScreenProps<RootStackParamList, "Camera">;
 
 export default function CameraScreen({ navigation }: CameraScreenProps) {
-  const [facing, setFacing] = useState<CameraType>("front");
-  const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef<CameraView | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isCameraActive, setIsCameraActive] = useState(true);
+  const [analysisStep, setAnalysisStep] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [scanType, setScanType] = useState<"face" | "product">("face");
 
-  if (!permission) return <View />;
-  if (!permission.granted) {
-    return (
-      <View style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>We need camera access.</Text>
-        <Button onPress={requestPermission} title="Grant Permission" />
-      </View>
-    );
-  }
+  const requestCameraPermission = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Denied", "We need camera access to analyze your skin.");
+      return false;
+    }
+    return true;
+  };
+
+  const requestMediaLibraryPermission = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Denied", "We need gallery access to analyze your photos.");
+      return false;
+    }
+    return true;
+  };
+
+  const compressImage = async (uri: string) => {
+    try {
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      return manipResult.uri;
+    } catch (error) {
+      console.log("Compression error:", error);
+      return uri;
+    }
+  };
+
+  const simulateProgress = (target: number, duration: number) => {
+    return new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= target) {
+            clearInterval(interval);
+            resolve();
+            return target;
+          }
+          return prev + 5;
+        });
+      }, duration / 10);
+    });
+  };
 
   const sendToAPI = async (imageUri: string) => {
     setIsAnalyzing(true);
-    setIsCameraActive(false);
+    setProgress(0);
 
     try {
-      console.log("🚀 Preparing image for classification...");
-
-      // ✅ Convert URI to blob
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
-
-      // ✅ Create FormData directly (skip Firebase)
-      const formData = new FormData();
-      formData.append("file", {
-        uri: imageUri,
-        name: `acne_${Date.now()}.jpg`,
-        type: "image/jpeg",
-      } as any);
-
-      const API_URL = "http://192.168.86.28:8000/classify/"; // Replace with your computer's IP
-      console.log("🚀 Sending request to FastAPI...", API_URL);
-
-      // ✅ Send FormData to GPT-4 backend
-      const apiResponse = await fetch(API_URL, {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      if (!apiResponse.ok) {
-        throw new Error(`API Error: ${apiResponse.status}`);
-      }
-
-      const result = await apiResponse.json();
-      console.log("✅ API Classification Result:", result);
-
-      // ✅ Handle low confidence cases (threshold at 0.6)
-      if (result?.confidence < 0.6) {
-        Alert.alert(
-          "Low Confidence",
-          "The image could not be classified confidently. Please retake the picture with better lighting or a clearer angle."
-        );
-        setIsCameraActive(true);
-        return;
-      }
-
-      // ✅ Navigate to results screen if confidence is high enough
-      navigation.navigate("Results", {
-        imageUri: imageUri, // Use original URI since you aren’t using Firebase anymore
-        classification: result.classification,
+      // Step 1: Optimization
+      setAnalysisStep("Optimizing image...");
+      const compressedUri = await compressImage(imageUri);
+      await simulateProgress(30, 600);
+      
+      if (scanType === "face") {
+        // --- FACE SCAN LOGIC ---
+        setAnalysisStep("Uploading to AI server...");
+        const analysisPromise = classifyAcne(compressedUri);
+        await simulateProgress(75, 1500);
         
-      });
+        setAnalysisStep("AI is identifying skin patterns...");
+        const result = await analysisPromise;
+        await simulateProgress(100, 400);
+
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        navigation.navigate("Results", {
+          imageUri: compressedUri,
+          classification: result.classification,
+          confidence: result.confidence,
+        });
+
+        uploadImageForAnalysis(compressedUri, result.classification).catch(console.error);
+
+      } else {
+        // --- PRODUCT SCAN LOGIC ---
+        setAnalysisStep("Reading ingredients...");
+        const productPromise = analyzeProduct(compressedUri);
+        await simulateProgress(60, 1000);
+
+        setAnalysisStep("Chemist AI is analyzing risks...");
+        const result = await productPromise;
+        await simulateProgress(100, 800);
+
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Correctly casting result as IngredientResult (handled by service return type)
+        navigation.navigate("ProductResults", { result });
+      }
+
     } catch (error) {
       console.error("❌ Error in sendToAPI:", error);
-      Alert.alert("Error", "Failed to classify the image.");
-      setIsCameraActive(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert("Analysis Failed", "We couldn't reach the AI server. Please check your connection.");
     } finally {
       setIsAnalyzing(false);
+      setAnalysisStep("");
+      setProgress(0);
     }
   };
 
+  // Launch the native camera (which includes the default flip button)
+  const handleTakePicture = async () => {
+    console.log("📸 Take Picture button pressed");
+    const hasPermission = await requestCameraPermission();
+    console.log("Permission status:", hasPermission);
+    if (!hasPermission) return;
+
+    try {
+        const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+        allowsEditing: true,
+        });
+        console.log("Camera result:", result.canceled ? "Canceled" : "Captured");
+
+        if (!result.canceled) {
+        sendToAPI(result.assets[0].uri);
+        }
+    } catch (e) {
+        console.error("Camera launch error:", e);
+    }
+  };
+
+  // Launch the image library to select a photo
   const handlePickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      quality: 1,
-    });
+    console.log("🖼️ Pick Image button pressed");
+    const hasPermission = await requestMediaLibraryPermission();
+    if (!hasPermission) return;
 
-    if (!result.canceled) {
-      sendToAPI(result.assets[0].uri);
+    try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+        allowsEditing: true,
+        });
+
+        if (!result.canceled) {
+        sendToAPI(result.assets[0].uri);
+        }
+    } catch (e) {
+        console.error("Image Picker error:", e);
     }
-  };
-
-  async function handleTakePicture(): Promise<void> {
-    if (cameraRef.current !== null) {
-      const photo = await cameraRef.current.takePictureAsync();
-      if (photo?.uri) {
-        sendToAPI(photo.uri);
-      }
-    }
-  }
-
-  const handleResumeCamera = () => {
-    setIsCameraActive(true);
   };
 
   return (
     <View style={styles.container}>
       {/* Classification Modal */}
       <Modal
-        animationType="fade"
+        animationType="slide"
         transparent={true}
         visible={isAnalyzing}
         onRequestClose={() => {}}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <ActivityIndicator size="large" color="#000" />
-            <Text style={styles.modalText}>Classifying... Please wait</Text>
+            <View style={styles.scannerLineContainer}>
+               <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+            <Text style={styles.modalText}>{analysisStep}</Text>
+            <View style={styles.progressBarBg}>
+               <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+            </View>
+            <Text style={styles.progressSubtext}>{progress}% Complete</Text>
           </View>
         </View>
       </Modal>
 
-      <CameraView
-        style={styles.camera}
-        facing={facing}
-        ref={(ref) => (cameraRef.current = ref)}
-        active={isCameraActive}
-      >
-        <View style={styles.captureContainer}>
-          {!isCameraActive ? (
-            <TouchableOpacity
-              onPress={handleResumeCamera}
-              style={styles.resumeButton}
-            >
-              <Text style={styles.captureText}>Resume Camera</Text>
-            </TouchableOpacity>
-          ) : (
-            <>
-              {/* Circular Capture Button */}
-              <TouchableOpacity
-                onPress={handleTakePicture}
-                style={styles.captureButtonContainer}
-              >
-                <View style={styles.outerCircle}>
-                  <View style={styles.innerCircle} />
-                </View>
-              </TouchableOpacity>
+      {/* Toggle Scan Type */}
+      <View style={styles.toggleContainer}>
+        <TouchableOpacity 
+          style={[styles.toggleButton, scanType === "face" && styles.toggleActive]}
+          onPress={() => setScanType("face")}
+        >
+          <Text style={[styles.toggleText, scanType === "face" && styles.toggleTextActive]}>Face Scan</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.toggleButton, scanType === "product" && styles.toggleActive]}
+          onPress={() => setScanType("product")}
+        >
+          <Text style={[styles.toggleText, scanType === "product" && styles.toggleTextActive]}>Product Audit</Text>
+        </TouchableOpacity>
+      </View>
 
-              {/* Improved Gallery Button */}
-              <TouchableOpacity
-                onPress={handlePickImage}
-                style={styles.galleryButton}
-              >
-                <Text style={styles.captureText}>Choose from Photos</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      </CameraView>
+      <View style={styles.buttonContainer}>
+        <Button title={scanType === "face" ? "Take Selfie" : "Scan Label"} onPress={handleTakePicture} />
+        <Button title="Choose Photo" onPress={handlePickImage} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  camera: { flex: 1 },
-  captureContainer: {
-    flex: 1,
-    backgroundColor: "transparent",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    paddingBottom: 30,
-  },
-  captureButtonContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  outerCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "transparent",
-    borderColor: "#fff",
-    borderWidth: 3,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  innerCircle: {
-    width: 55,
-    height: 55,
-    borderRadius: 27.5,
-    backgroundColor: "#fff",
-  },
-  galleryButton: {
-    alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
+  container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
+  toggleContainer: {
+    flexDirection: "row",
+    backgroundColor: "#F0F0F0",
     borderRadius: 20,
-    marginBottom: 20,
+    padding: 4,
+    marginBottom: 40,
+    width: "80%",
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderRadius: 16,
+  },
+  toggleActive: {
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleText: {
+    fontWeight: "600",
+    color: "#999",
+  },
+  toggleTextActive: {
+    color: "#007AFF",
+  },
+  // ... (keep other styles)
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "90%",
+    marginTop: 20,
   },
   modalContainer: {
     flex: 1,
@@ -226,32 +263,43 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 10,
+    padding: 30,
+    borderRadius: 24,
     alignItems: "center",
-    width: 250,
+    width: "85%",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 10,
   },
-  modalText: { fontSize: 16, marginTop: 10 },
-  captureText: { fontSize: 16, color: "#000" },
-  resumeButton: {
-    alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
-    borderRadius: 20,
-    marginBottom: 20,
+  modalText: { 
+    fontSize: 18, 
+    fontWeight: "600",
+    marginTop: 20, 
+    color: "#333",
+    textAlign: "center"
   },
-
-  // ✅ FIXED: Added missing permissionContainer style
-  permissionContainer: {
-    flex: 1,
+  progressSubtext: {
+    fontSize: 12,
+    color: "#999",
+    marginTop: 8,
+  },
+  scannerLineContainer: {
+    height: 80,
     justifyContent: "center",
     alignItems: "center",
   },
-
-  permissionText: {
-    fontSize: 18,
-    marginBottom: 20,
+  progressBarBg: {
+    width: "100%",
+    height: 6,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 3,
+    marginTop: 20,
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#007AFF",
+    borderRadius: 3,
   },
 });
-

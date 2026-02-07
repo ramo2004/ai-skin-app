@@ -11,7 +11,7 @@ export default function NotFoundScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title">This screen doesn't exist.</ThemedText>
+      <ThemedText type="title">This screen doesn&apos;t exist.</ThemedText>
       <TouchableOpacity
         onPress={() => navigation.navigate("Home")}
         style={styles.link}
