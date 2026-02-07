@@ -12,7 +12,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as Haptics from "expo-haptics";
-import { classifyAcne, analyzeProduct, IngredientResult } from "../services/classificationService";
+import { classifyAcne, analyzeProduct } from "../services/classificationService";
 import { uploadImageForAnalysis } from "../services/firebaseService";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/AppNavigator";

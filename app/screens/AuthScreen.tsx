@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ImageBackground,
 } from "react-native";
 import { signIn, signUp } from "../services/firebaseService";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";

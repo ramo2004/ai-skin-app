@@ -13,7 +13,6 @@ import { ROUTINES, RoutineStep } from "../data/routineData";
  * eventually be refined by AI data.
  */
 export default function RoutineScreen() {
-  const [loading, setLoading] = useState(true);
   const [skinType, setSkinType] = useState("Normal");
   
   // Initialize with Normal as a safe fallback
@@ -39,7 +38,6 @@ export default function RoutineScreen() {
         setNightSteps(selectedRoutine.night);
       }
     }
-    setLoading(false);
   };
 
   const toggleStep = (period: "day" | "night", id: number) => {

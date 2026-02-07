@@ -4,17 +4,14 @@
  */
 
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, TouchableOpacity, Image, ScrollView, Dimensions } from "react-native";
+import { StyleSheet, View, TouchableOpacity, Image, ScrollView, Dimensions, Alert } from "react-native";
 import { ThemedText } from "../components/ThemedText";
-import { ThemedView } from "../components/ThemedView";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { signOut } from "../services/firebaseService";
-import { Alert } from "react-native";
+import { signOut, getUserProfile } from "../services/firebaseService";
 import { dailyTips, SkinTip } from "../data/skinTips";
 import { auth } from "../config/firebaseConfig";
-import { getUserProfile } from "../services/firebaseService"; // Fetch user profile for name
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 

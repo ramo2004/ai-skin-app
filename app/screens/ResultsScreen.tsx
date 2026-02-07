@@ -6,7 +6,6 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/AppNavigator";
@@ -14,8 +13,6 @@ import { getRecommendations } from "../services/recommendationService";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Results">;
-
-const { width } = Dimensions.get("window");
 
 export default function ResultsScreen({ route, navigation }: Props): React.JSX.Element {
   const { imageUri, classification, confidence } = route.params;

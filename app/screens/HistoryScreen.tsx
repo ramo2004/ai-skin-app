@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, StyleSheet, FlatList, Image, ActivityIndicator } from "react-native";
 import { ThemedText } from "../components/ThemedText";
 import { collection, query, where, orderBy, getDocs, limit } from "firebase/firestore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";

@@ -4,8 +4,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
   TextInput,
 } from "react-native";

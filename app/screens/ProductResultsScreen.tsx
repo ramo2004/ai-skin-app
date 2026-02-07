@@ -1,9 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";
-import { IngredientResult } from "../services/classificationService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ProductResults">;
 

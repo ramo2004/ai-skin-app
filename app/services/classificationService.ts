@@ -146,11 +146,11 @@ export interface IngredientResult {
   has_risky_ingredients: boolean;
   risk_level: "High" | "Medium" | "Low" | "Safe" | "Unknown" | "Error";
   summary: string;
-  risky_ingredients: Array<{
+  risky_ingredients: {
     name: string;
     reason: string;
     rating: number;
-  }>;
+  }[];
 }
 
 /**

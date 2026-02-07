@@ -41,3 +41,13 @@
 
 ### Outstanding
 - Lint warnings remain (unused imports/vars and non-blocking style warnings).
+
+### Second Pass Cleanup (2026-02-07)
+- Removed unused imports/variables in multiple screens.
+- Removed duplicate imports in `HomeScreen`.
+- Fixed lint style warning for `IngredientResult` array type.
+- Fixed React hook dependency warning in `components/HelloWave.tsx`.
+
+#### Verification
+- `npm run -s lint` -> passed with 0 warnings/errors.
+- `npx tsc --noEmit` -> passed.
