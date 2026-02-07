@@ -99,7 +99,10 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
           confidence: result.confidence,
         });
 
-        uploadImageForAnalysis(compressedUri, result.classification).catch(console.error);
+        uploadImageForAnalysis(compressedUri, {
+          classification: result.classification,
+          confidence: result.confidence,
+        }).catch(console.error);
 
       } else {
         // --- PRODUCT SCAN LOGIC ---

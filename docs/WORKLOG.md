@@ -51,3 +51,20 @@
 #### Verification
 - `npm run -s lint` -> passed with 0 warnings/errors.
 - `npx tsc --noEmit` -> passed.
+
+### Privacy + Reminders Upgrade (2026-02-07)
+- Added daily local routine reminders (8:00 AM and 9:00 PM) using `expo-notifications`.
+  - New service: `app/services/notificationService.ts`
+  - New UI toggle: `app/screens/RoutineScreen.tsx`
+- Added privacy-first scan history behavior:
+  - New preference: save cloud scan images (`default: OFF`).
+  - Preference controls whether images are uploaded to Firebase Storage.
+  - History still logs metadata/classification even when image storage is disabled.
+  - UI toggle added in `HistoryScreen`.
+- Added history sharing/export via native share sheet from `HistoryScreen`.
+- Improved history data consistency by saving both classification and confidence from face scans.
+
+#### Verification
+- `npm install` -> passed
+- `npx tsc --noEmit` -> passed
+- `npm run -s lint` -> passed

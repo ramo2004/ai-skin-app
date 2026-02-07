@@ -6,12 +6,15 @@
 import { db, storage, auth } from "../config/firebaseConfig";
 import { collection, addDoc, doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut as firebaseSignOut,
   updateProfile
 } from "firebase/auth";
+
+const SAVE_CLOUD_IMAGES_KEY = "privacy.save_cloud_images";
 
 /**
  * --- AUTHENTICATION ---
@@ -131,6 +134,23 @@ export const getUserProfile = async (uid: string): Promise<{ profile: UserProfil
 };
 
 /**
+ * --- PRIVACY PREFERENCES ---
+ */
+export const getSaveCloudImagesPreference = async (): Promise<boolean> => {
+  try {
+    const value = await AsyncStorage.getItem(SAVE_CLOUD_IMAGES_KEY);
+    // Privacy-first default: disabled
+    return value === "true";
+  } catch {
+    return false;
+  }
+};
+
+export const setSaveCloudImagesPreference = async (enabled: boolean): Promise<void> => {
+  await AsyncStorage.setItem(SAVE_CLOUD_IMAGES_KEY, String(enabled));
+};
+
+/**
  * --- ANALYSIS HISTORY ---
  */
 
@@ -151,22 +171,28 @@ export async function uploadImageForAnalysis(photoUri: string, classification: a
     return;
   }
 
-  // 1. Prepare file blob
-  const response = await fetch(photoUri);
-  const blob = await response.blob();
+  const shouldSaveImage = await getSaveCloudImagesPreference();
+  let downloadURL: string | null = null;
 
-  // 2. Upload to Storage
-  const fileName = `images/${user.uid}/${Date.now()}.jpg`;
-  const fileRef = ref(storage, fileName);
-  await uploadBytes(fileRef, blob);
-  
-  // 3. Get public URL
-  const downloadURL = await getDownloadURL(fileRef);
+  if (shouldSaveImage) {
+    // 1. Prepare file blob
+    const response = await fetch(photoUri);
+    const blob = await response.blob();
+
+    // 2. Upload to Storage
+    const fileName = `images/${user.uid}/${Date.now()}.jpg`;
+    const fileRef = ref(storage, fileName);
+    await uploadBytes(fileRef, blob);
+    
+    // 3. Get public URL
+    downloadURL = await getDownloadURL(fileRef);
+  }
 
   // 4. Save metadata to Firestore 'scans' collection
   await addDoc(collection(db, "scans"), {
     userId: user.uid,
     imageUrl: downloadURL,
+    imageStored: shouldSaveImage,
     classification: classification,
     createdAt: new Date().toISOString(),
   });

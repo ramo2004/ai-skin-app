@@ -1,17 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, FlatList, Image, ActivityIndicator } from "react-native";
+import { View, StyleSheet, FlatList, Image, ActivityIndicator, Switch, TouchableOpacity, Share } from "react-native";
 import { ThemedText } from "../components/ThemedText";
 import { collection, query, where, orderBy, getDocs, limit } from "firebase/firestore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { auth, db } from "../config/firebaseConfig";
+import { getSaveCloudImagesPreference, setSaveCloudImagesPreference } from "../services/firebaseService";
 
 export default function HistoryScreen() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saveCloudImages, setSaveCloudImages] = useState(false);
 
   useEffect(() => {
     fetchHistory();
+    loadPrivacyPreference();
   }, []);
+
+  const loadPrivacyPreference = async () => {
+    const enabled = await getSaveCloudImagesPreference();
+    setSaveCloudImages(enabled);
+  };
 
   const fetchHistory = async () => {
     if (!auth.currentUser) return;
@@ -38,27 +46,63 @@ export default function HistoryScreen() {
   };
 
   const renderItem = ({ item }: { item: any }) => {
+    const classificationLabel =
+      typeof item.classification === "string"
+        ? item.classification
+        : item.classification?.classification || "Unknown";
+
     // Determine color based on classification (simple mapping)
     let badgeColor = "#2196F3";
-    if (item.classification?.classification?.toLowerCase().includes("clear")) badgeColor = "#4CAF50";
-    if (item.classification?.classification?.toLowerCase().includes("cyst")) badgeColor = "#F44336";
+    if (classificationLabel.toLowerCase().includes("clear")) badgeColor = "#4CAF50";
+    if (classificationLabel.toLowerCase().includes("cyst")) badgeColor = "#F44336";
 
     return (
       <View style={styles.card}>
-        <Image source={{ uri: item.imageUrl }} style={styles.thumbnail} />
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.thumbnail} />
+        ) : (
+          <View style={[styles.thumbnail, styles.thumbnailPlaceholder]}>
+            <MaterialCommunityIcons name="image-off-outline" size={24} color="#9aa0a6" />
+          </View>
+        )}
         <View style={styles.info}>
           <ThemedText style={styles.date}>
             {item.createdAt ? new Date(item.createdAt).toLocaleDateString() + " • " + new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Unknown Date"}
           </ThemedText>
           <View style={[styles.badge, { backgroundColor: badgeColor + "20" }]}>
             <ThemedText style={[styles.diagnosis, { color: badgeColor }]}>
-              {item.classification?.classification || "Unknown"}
+              {classificationLabel}
             </ThemedText>
           </View>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
       </View>
     );
+  };
+
+  const handleToggleImageSaving = async (enabled: boolean) => {
+    setSaveCloudImages(enabled);
+    await setSaveCloudImagesPreference(enabled);
+  };
+
+  const handleShareHistory = async () => {
+    const lines = history.map((item, index) => {
+      const label =
+        typeof item.classification === "string"
+          ? item.classification
+          : item.classification?.classification || "Unknown";
+      const confidence =
+        typeof item.classification === "object" && typeof item.classification?.confidence === "number"
+          ? ` (${Math.round(item.classification.confidence * 100)}%)`
+          : "";
+      const date = item.createdAt ? new Date(item.createdAt).toLocaleString() : "Unknown date";
+      return `${index + 1}. ${date} - ${label}${confidence}`;
+    });
+
+    if (!lines.length) return;
+    await Share.share({
+      message: `Skin scan history:\n\n${lines.join("\n")}`,
+    });
   };
 
   if (loading) {
@@ -74,6 +118,27 @@ export default function HistoryScreen() {
       <View style={styles.header}>
         <ThemedText type="title" style={styles.title}>History</ThemedText>
         <ThemedText style={styles.subtitle}>Your skin analysis journey</ThemedText>
+      </View>
+      
+      <View style={styles.controls}>
+        <View style={styles.privacyRow}>
+          <View style={{ flex: 1 }}>
+            <ThemedText style={styles.privacyTitle}>Save scan images to cloud history</ThemedText>
+            <ThemedText style={styles.privacySub}>
+              When off, scans are logged without image uploads (privacy-first default).
+            </ThemedText>
+          </View>
+          <Switch value={saveCloudImages} onValueChange={handleToggleImageSaving} />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.shareButton, history.length === 0 && styles.shareButtonDisabled]}
+          disabled={history.length === 0}
+          onPress={handleShareHistory}
+        >
+          <MaterialCommunityIcons name="share-variant" size={18} color="#007AFF" />
+          <ThemedText style={styles.shareText}>Share Logs</ThemedText>
+        </TouchableOpacity>
       </View>
 
       {history.length === 0 ? (
@@ -117,6 +182,45 @@ const styles = StyleSheet.create({
     color: "#666",
     fontSize: 16,
   },
+  controls: {
+    paddingHorizontal: 24,
+    marginBottom: 12,
+    gap: 12,
+  },
+  privacyRow: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  privacyTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+  },
+  privacySub: {
+    fontSize: 12,
+    color: "#777",
+    marginTop: 4,
+  },
+  shareButton: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  shareButtonDisabled: {
+    opacity: 0.5,
+  },
+  shareText: {
+    color: "#007AFF",
+    fontWeight: "600",
+  },
   listContent: {
     paddingHorizontal: 24,
     paddingBottom: 40,
@@ -139,6 +243,10 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 12,
     backgroundColor: "#f0f0f0",
+  },
+  thumbnailPlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   info: {
     flex: 1,

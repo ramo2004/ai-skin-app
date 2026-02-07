@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch } from "react-native";
 import { ThemedText } from "../components/ThemedText";
 import { auth } from "../config/firebaseConfig";
 import { getUserProfile } from "../services/firebaseService";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { areRoutineRemindersEnabled, cancelRoutineReminders, enableRoutineReminders } from "../services/notificationService";
 
 import { ROUTINES, RoutineStep } from "../data/routineData";
 
@@ -14,6 +15,7 @@ import { ROUTINES, RoutineStep } from "../data/routineData";
  */
 export default function RoutineScreen() {
   const [skinType, setSkinType] = useState("Normal");
+  const [remindersEnabled, setRemindersEnabled] = useState(false);
   
   // Initialize with Normal as a safe fallback
   const [daySteps, setDaySteps] = useState<RoutineStep[]>(ROUTINES.Normal.day);
@@ -21,6 +23,7 @@ export default function RoutineScreen() {
 
   useEffect(() => {
     fetchProfile();
+    loadReminderState();
   }, []);
 
   /**
@@ -37,6 +40,25 @@ export default function RoutineScreen() {
         setDaySteps(selectedRoutine.day);
         setNightSteps(selectedRoutine.night);
       }
+    }
+  };
+
+  const loadReminderState = async () => {
+    const enabled = await areRoutineRemindersEnabled();
+    setRemindersEnabled(enabled);
+  };
+
+  const handleReminderToggle = async (enabled: boolean) => {
+    try {
+      if (enabled) {
+        await enableRoutineReminders();
+      } else {
+        await cancelRoutineReminders();
+      }
+      setRemindersEnabled(enabled);
+    } catch (error: any) {
+      Alert.alert("Reminder Setup", error.message || "Could not update reminder settings.");
+      setRemindersEnabled(false);
     }
   };
 
@@ -100,6 +122,14 @@ export default function RoutineScreen() {
            <MaterialCommunityIcons name="cog" size={20} color="#666" />
            <ThemedText style={styles.adjustText}>Adjust Duration & Products</ThemedText>
         </TouchableOpacity>
+
+        <View style={styles.reminderCard}>
+          <View style={{ flex: 1 }}>
+            <ThemedText style={styles.reminderTitle}>Daily routine reminders</ThemedText>
+            <ThemedText style={styles.reminderText}>Morning 8:00 AM and evening 9:00 PM notifications.</ThemedText>
+          </View>
+          <Switch value={remindersEnabled} onValueChange={handleReminderToggle} />
+        </View>
 
         <View style={styles.disclaimerContainer}>
           <MaterialCommunityIcons name="information-outline" size={16} color="#007AFF" />
@@ -201,5 +231,24 @@ const styles = StyleSheet.create({
     color: "#007AFF",
     flex: 1,
     lineHeight: 16,
+  },
+  reminderCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 10,
+  },
+  reminderTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+  },
+  reminderText: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 3,
   },
 });
