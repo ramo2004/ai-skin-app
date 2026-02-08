@@ -127,7 +127,7 @@ export const getUserProfile = async (uid: string): Promise<{ profile: UserProfil
       return { profile: null, error: false }; // User exists, but has no profile document
     }
   } catch (error) {
-    console.error("Error getting user profile:", error);
+    console.warn("Profile read fallback (likely offline/permission/network):", error);
     // Treat timeouts or connection failures as errors so UI can degrade gracefully
     return { profile: null, error: true };
   }

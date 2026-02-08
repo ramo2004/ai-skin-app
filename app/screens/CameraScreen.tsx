@@ -122,7 +122,11 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
     } catch (error) {
       console.error("❌ Error in sendToAPI:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Analysis Failed", "We couldn't reach the AI server. Please check your connection.");
+      const message =
+        error instanceof Error
+          ? error.message
+          : "We couldn't reach the AI server. Please check your connection.";
+      Alert.alert("Analysis Failed", message);
     } finally {
       setIsAnalyzing(false);
       setAnalysisStep("");

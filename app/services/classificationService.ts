@@ -56,14 +56,18 @@ export async function classifyAcne(
       }
     }
 
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new Error("You must be signed in to run analysis.");
+    }
+
     // ✅ Get Firebase ID Token for backend authentication
     let idToken = "";
-    if (auth.currentUser) {
-      try {
-        idToken = await auth.currentUser.getIdToken();
-      } catch (e) {
-        console.warn("Failed to get ID token:", e);
-      }
+    try {
+      idToken = await currentUser.getIdToken(true);
+    } catch (e) {
+      console.warn("Failed to get ID token:", e);
+      throw new Error("Authentication token refresh failed. Please sign out and sign in again.");
     }
 
     console.log("🚀 Sending request to FastAPI backend...");
@@ -78,7 +82,14 @@ export async function classifyAcne(
     });
 
     if (!apiResponse.ok) {
-      throw new Error(`API Error: ${apiResponse.status}`);
+      let detail = "";
+      try {
+        const errorBody = await apiResponse.json();
+        detail = errorBody?.detail ? ` - ${errorBody.detail}` : "";
+      } catch {
+        // ignore parse failures and keep generic status
+      }
+      throw new Error(`API Error: ${apiResponse.status}${detail}`);
     }
 
     const result = await apiResponse.json();
@@ -168,11 +179,15 @@ export async function analyzeProduct(photoUri: string): Promise<IngredientResult
       type: "image/jpeg",
     } as any);
     formData.append("scan_type", "product");
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new Error("You must be signed in to run product analysis.");
+    }
 
     // ✅ Append User Profile Data for Contextual Analysis
-    if (auth.currentUser) {
+    if (currentUser) {
       try {
-        const result = await getUserProfile(auth.currentUser.uid);
+        const result = await getUserProfile(currentUser.uid);
         if (result.profile) {
           formData.append("age", result.profile.age);
           formData.append("gender", result.profile.gender);
@@ -183,12 +198,11 @@ export async function analyzeProduct(photoUri: string): Promise<IngredientResult
       }
     }
     let idToken = "";
-    if (auth.currentUser) {
-      try {
-        idToken = await auth.currentUser.getIdToken();
-      } catch (e) {
-        console.warn("Failed to get ID token:", e);
-      }
+    try {
+      idToken = await currentUser.getIdToken(true);
+    } catch (e) {
+      console.warn("Failed to get ID token:", e);
+      throw new Error("Authentication token refresh failed. Please sign out and sign in again.");
     }
 
     const apiResponse = await fetch(getApiUrl(), {
@@ -200,7 +214,14 @@ export async function analyzeProduct(photoUri: string): Promise<IngredientResult
     });
 
     if (!apiResponse.ok) {
-      throw new Error(`API Error: ${apiResponse.status}`);
+      let detail = "";
+      try {
+        const errorBody = await apiResponse.json();
+        detail = errorBody?.detail ? ` - ${errorBody.detail}` : "";
+      } catch {
+        // ignore parse failures and keep generic status
+      }
+      throw new Error(`API Error: ${apiResponse.status}${detail}`);
     }
 
     const json = await apiResponse.json();
@@ -217,3 +238,6 @@ export async function analyzeProduct(photoUri: string): Promise<IngredientResult
     throw error;
   }
 }
+    if (!auth.currentUser) {
+      throw new Error("You must be signed in to run product analysis.");
+    }

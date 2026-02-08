@@ -89,3 +89,13 @@
 #### Verification
 - `npx tsc --noEmit` -> passed
 - `npm run -s lint` -> passed
+
+### Auth + Connectivity Diagnostics (2026-02-07)
+- Improved API auth failure diagnostics in `classificationService` by surfacing backend error detail.
+- Added explicit signed-in checks before scan requests.
+- Updated camera failure alert to show actionable backend error messages.
+- Downgraded profile timeout log severity to warning to reduce false-critical noise during intermittent network conditions.
+
+#### Verification
+- `npx tsc --noEmit` -> passed
+- `npm run -s lint` -> passed
