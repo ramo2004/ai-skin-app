@@ -85,11 +85,10 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
       if (scanType === "face") {
         // --- FACE SCAN LOGIC ---
         setAnalysisStep("Uploading to AI server...");
-        const analysisPromise = classifyAcne(compressedUri);
         await simulateProgress(75, 1500);
         
         setAnalysisStep("AI is identifying skin patterns...");
-        const result = await analysisPromise;
+        const result = await classifyAcne(compressedUri);
         await simulateProgress(100, 400);
 
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -107,11 +106,10 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
       } else {
         // --- PRODUCT SCAN LOGIC ---
         setAnalysisStep("Reading ingredients...");
-        const productPromise = analyzeProduct(compressedUri);
         await simulateProgress(60, 1000);
 
         setAnalysisStep("Chemist AI is analyzing risks...");
-        const result = await productPromise;
+        const result = await analyzeProduct(compressedUri);
         await simulateProgress(100, 800);
 
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

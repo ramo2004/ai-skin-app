@@ -99,3 +99,19 @@
 #### Verification
 - `npx tsc --noEmit` -> passed
 - `npm run -s lint` -> passed
+
+### Runtime Rejection Fix (2026-02-07)
+- Fixed potential unhandled promise rejection in `CameraScreen` by avoiding deferred await pattern for scan requests.
+- This prevents red-screen runtime errors when auth/product-scan requests fail fast.
+
+#### Verification
+- `npx tsc --noEmit` -> passed
+- `npm run -s lint` -> passed
+
+### Runtime Rejection Fix (2026-02-07)
+- Fixed potential unhandled promise rejection in `CameraScreen` by avoiding deferred await pattern for scan requests.
+- This prevents red-screen runtime errors when auth/product-scan requests fail fast.
+
+#### Verification
+- `npx tsc --noEmit` -> passed
+- `npm run -s lint` -> passed
