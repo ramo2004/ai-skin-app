@@ -86,3 +86,26 @@ export async function enableRoutineReminders(): Promise<void> {
   await setReminderIds([morningId, eveningId]);
   await setRoutineRemindersEnabled(true);
 }
+
+export async function sendTestRoutineNotification(): Promise<void> {
+  const permissions = await Notifications.getPermissionsAsync();
+  const granted =
+    permissions.granted ||
+    (await Notifications.requestPermissionsAsync()).granted;
+
+  if (!granted) {
+    throw new Error("Notification permission was not granted.");
+  }
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "Routine Reminder Test",
+      body: "If you see this, notifications are working.",
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: 2,
+      repeats: false,
+    },
+  });
+}

@@ -4,7 +4,7 @@ import { ThemedText } from "../components/ThemedText";
 import { auth } from "../config/firebaseConfig";
 import { getUserProfile } from "../services/firebaseService";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { areRoutineRemindersEnabled, cancelRoutineReminders, enableRoutineReminders } from "../services/notificationService";
+import { areRoutineRemindersEnabled, cancelRoutineReminders, enableRoutineReminders, sendTestRoutineNotification } from "../services/notificationService";
 
 import { ROUTINES, RoutineStep } from "../data/routineData";
 
@@ -131,6 +131,21 @@ export default function RoutineScreen() {
           <Switch value={remindersEnabled} onValueChange={handleReminderToggle} />
         </View>
 
+        <TouchableOpacity
+          style={styles.testReminderButton}
+          onPress={async () => {
+            try {
+              await sendTestRoutineNotification();
+              Alert.alert("Scheduled", "Test reminder will appear in a few seconds.");
+            } catch (error: any) {
+              Alert.alert("Reminder Test", error.message || "Could not schedule test reminder.");
+            }
+          }}
+        >
+          <MaterialCommunityIcons name="bell-ring-outline" size={18} color="#007AFF" />
+          <ThemedText style={styles.testReminderText}>Send test notification now</ThemedText>
+        </TouchableOpacity>
+
         <View style={styles.disclaimerContainer}>
           <MaterialCommunityIcons name="information-outline" size={16} color="#007AFF" />
           <ThemedText style={styles.disclaimerText}>
@@ -250,5 +265,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     marginTop: 3,
+  },
+  testReminderButton: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#d8e9ff",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  testReminderText: {
+    color: "#007AFF",
+    fontWeight: "600",
   },
 });

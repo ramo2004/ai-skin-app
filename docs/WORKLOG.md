@@ -80,3 +80,12 @@
 #### Verification
 - `npx tsc --noEmit` -> passed
 - `npm run -s lint` -> passed
+
+### Testing UX Update (2026-02-07)
+- Added `Send test notification now` button on Routine screen for instant phone validation.
+- Added `sendTestRoutineNotification()` in notification service (2-second time-interval trigger).
+- Updated local API URL in `.env` to current LAN IP for immediate local device testing.
+
+#### Verification
+- `npx tsc --noEmit` -> passed
+- `npm run -s lint` -> passed
