@@ -14,6 +14,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as Haptics from "expo-haptics";
 import { classifyAcne, analyzeProduct } from "../services/classificationService";
 import { uploadImageForAnalysis } from "../services/firebaseService";
+import { auth } from "../config/firebaseConfig";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 
@@ -73,6 +74,12 @@ export default function CameraScreen({ navigation }: CameraScreenProps) {
   };
 
   const sendToAPI = async (imageUri: string) => {
+    if (!auth.currentUser) {
+      Alert.alert("Sign In Required", "Please sign in before running analysis.");
+      navigation.replace("Auth");
+      return;
+    }
+
     setIsAnalyzing(true);
     setProgress(0);
 

@@ -115,3 +115,19 @@
 #### Verification
 - `npx tsc --noEmit` -> passed
 - `npm run -s lint` -> passed
+
+### Scan Auth Guard (2026-02-08)
+- Added pre-scan auth guard in `CameraScreen`.
+- If user session is missing, app now alerts and routes to `Auth` before starting scan work.
+
+#### Verification
+- `npx tsc --noEmit` -> passed
+- `npm run -s lint` -> passed
+
+### Scan Auth Guard (2026-02-08)
+- Added pre-scan auth guard in `CameraScreen`.
+- If user session is missing, app now alerts and routes to `Auth` before starting scan work.
+
+#### Verification
+- `npx tsc --noEmit` -> passed
+- `npm run -s lint` -> passed
