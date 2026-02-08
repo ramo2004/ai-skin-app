@@ -131,3 +131,19 @@
 #### Verification
 - `npx tsc --noEmit` -> passed
 - `npm run -s lint` -> passed
+
+### Hotfix: Startup Auth Throw (2026-02-08)
+- Removed accidental top-level auth guard in `classificationService.ts` that was throwing during module import.
+- Root cause of immediate red-screen runtime error on app launch after QR scan.
+
+#### Verification
+- `npx tsc --noEmit` -> passed
+- `npm run -s lint` -> passed
+
+### Hotfix: Startup Auth Throw (2026-02-08)
+- Removed accidental top-level auth guard in `classificationService.ts` that was throwing during module import.
+- Root cause of immediate red-screen runtime error on app launch after QR scan.
+
+#### Verification
+- `npx tsc --noEmit` -> passed
+- `npm run -s lint` -> passed

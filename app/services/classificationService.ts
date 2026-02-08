@@ -238,6 +238,3 @@ export async function analyzeProduct(photoUri: string): Promise<IngredientResult
     throw error;
   }
 }
-    if (!auth.currentUser) {
-      throw new Error("You must be signed in to run product analysis.");
-    }
