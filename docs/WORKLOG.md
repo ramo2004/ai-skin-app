@@ -68,3 +68,15 @@
 - `npm install` -> passed
 - `npx tsc --noEmit` -> passed
 - `npm run -s lint` -> passed
+
+### Data Deletion Upgrade (2026-02-07)
+- Added `Delete My Data` flow in `HistoryScreen` with destructive confirmation.
+- Added `deleteAllUserData()` in `firebaseService`:
+  - Deletes user profile doc (`users/{uid}`)
+  - Deletes user scan docs (`scans` where `userId == uid`) in batched writes
+  - Deletes stored scan images under `images/{uid}` in Firebase Storage
+  - Clears local cloud-image preference
+
+#### Verification
+- `npx tsc --noEmit` -> passed
+- `npm run -s lint` -> passed

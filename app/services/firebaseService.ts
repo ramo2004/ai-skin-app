@@ -4,8 +4,8 @@
  */
 
 import { db, storage, auth } from "../config/firebaseConfig";
-import { collection, addDoc, doc, setDoc, getDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, addDoc, doc, setDoc, getDoc, getDocs, query, where, writeBatch, deleteDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL, listAll, deleteObject } from "firebase/storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { 
   createUserWithEmailAndPassword, 
@@ -148,6 +148,53 @@ export const getSaveCloudImagesPreference = async (): Promise<boolean> => {
 
 export const setSaveCloudImagesPreference = async (enabled: boolean): Promise<void> => {
   await AsyncStorage.setItem(SAVE_CLOUD_IMAGES_KEY, String(enabled));
+};
+
+/**
+ * Deletes all user-generated app data (profile, scans, and stored scan images).
+ * Account auth remains intact so the user may continue using the app.
+ */
+export const deleteAllUserData = async (): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error("No user is logged in.");
+  }
+
+  // 1) Delete profile document
+  await deleteDoc(doc(db, "users", user.uid));
+
+  // 2) Delete scan history documents in batches
+  const scansQuery = query(collection(db, "scans"), where("userId", "==", user.uid));
+  const scansSnapshot = await getDocs(scansQuery);
+  if (!scansSnapshot.empty) {
+    let batch = writeBatch(db);
+    let counter = 0;
+    for (const scanDoc of scansSnapshot.docs) {
+      batch.delete(scanDoc.ref);
+      counter += 1;
+      if (counter >= 400) {
+        await batch.commit();
+        batch = writeBatch(db);
+        counter = 0;
+      }
+    }
+    if (counter > 0) {
+      await batch.commit();
+    }
+  }
+
+  // 3) Delete all stored images for this user
+  //    Safe even if image saving was disabled for some/all scans.
+  const userImagesRef = ref(storage, `images/${user.uid}`);
+  try {
+    const listed = await listAll(userImagesRef);
+    await Promise.all(listed.items.map((itemRef) => deleteObject(itemRef)));
+  } catch {
+    // Ignore storage-listing failures to avoid blocking data purge.
+  }
+
+  // 4) Clear local privacy preference
+  await AsyncStorage.removeItem(SAVE_CLOUD_IMAGES_KEY);
 };
 
 /**

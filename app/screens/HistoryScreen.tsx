@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, FlatList, Image, ActivityIndicator, Switch, TouchableOpacity, Share } from "react-native";
+import { View, StyleSheet, FlatList, Image, ActivityIndicator, Switch, TouchableOpacity, Share, Alert } from "react-native";
 import { ThemedText } from "../components/ThemedText";
 import { collection, query, where, orderBy, getDocs, limit } from "firebase/firestore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { auth, db } from "../config/firebaseConfig";
-import { getSaveCloudImagesPreference, setSaveCloudImagesPreference } from "../services/firebaseService";
+import { deleteAllUserData, getSaveCloudImagesPreference, setSaveCloudImagesPreference } from "../services/firebaseService";
 
 export default function HistoryScreen() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveCloudImages, setSaveCloudImages] = useState(false);
+  const [deletingData, setDeletingData] = useState(false);
 
   useEffect(() => {
     fetchHistory();
@@ -105,6 +106,35 @@ export default function HistoryScreen() {
     });
   };
 
+  const confirmDeleteAllData = () => {
+    Alert.alert(
+      "Delete My Data",
+      "This will permanently delete your profile, scan logs, and stored scan images.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: handleDeleteAllData,
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAllData = async () => {
+    try {
+      setDeletingData(true);
+      await deleteAllUserData();
+      setHistory([]);
+      setSaveCloudImages(false);
+      Alert.alert("Done", "Your app data has been deleted.");
+    } catch (error: any) {
+      Alert.alert("Delete Failed", error.message || "Could not delete your data.");
+    } finally {
+      setDeletingData(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -138,6 +168,19 @@ export default function HistoryScreen() {
         >
           <MaterialCommunityIcons name="share-variant" size={18} color="#007AFF" />
           <ThemedText style={styles.shareText}>Share Logs</ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.deleteDataButton, deletingData && styles.shareButtonDisabled]}
+          disabled={deletingData}
+          onPress={confirmDeleteAllData}
+        >
+          {deletingData ? (
+            <ActivityIndicator size="small" color="#B3261E" />
+          ) : (
+            <MaterialCommunityIcons name="delete-forever-outline" size={18} color="#B3261E" />
+          )}
+          <ThemedText style={styles.deleteDataText}>Delete My Data</ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -220,6 +263,21 @@ const styles = StyleSheet.create({
   shareText: {
     color: "#007AFF",
     fontWeight: "600",
+  },
+  deleteDataButton: {
+    backgroundColor: "#fff5f5",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#ffd4d4",
+  },
+  deleteDataText: {
+    color: "#B3261E",
+    fontWeight: "700",
   },
   listContent: {
     paddingHorizontal: 24,
